@@ -1,0 +1,6 @@
+aiosqlite==0.10.0
+bareASGI>=1<2
+bareASGI.cors>=1<2
+bareASGI.graphql.next>=1<2
+PyJWT~=1.7
+uvicorn>=0<1

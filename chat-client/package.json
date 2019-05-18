@@ -1,0 +1,32 @@
+{
+  "name": "neutrino-example2",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "webpack-dev-server --mode development --open",
+    "build": "webpack --mode production",
+    "lint": "eslint --cache --format codeframe --ext mjs,jsx,js src"
+  },
+  "dependencies": {
+    "@jetblack/graphql-reconnect-client": "^2.0.2",
+    "@material-ui/core": "^3.9.3",
+    "@material-ui/icons": "^3.0.2",
+    "luxon": "^1.13.2",
+    "prop-types": "^15",
+    "react": "^16",
+    "react-dom": "^16",
+    "react-hot-loader": "^4",
+    "react-infinite-scroller": "^1.2.4",
+    "typeface-roboto": "0.0.54"
+  },
+  "devDependencies": {
+    "@neutrinojs/react": "^9.0.0-rc.3",
+    "@neutrinojs/standardjs": "^9.0.0-rc.3",
+    "eslint": "^5",
+    "neutrino": "^9.0.0-rc.3",
+    "webpack": "^4",
+    "webpack-cli": "^3",
+    "webpack-dev-server": "^3"
+  }
+}
