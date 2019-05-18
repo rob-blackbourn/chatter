@@ -23,10 +23,7 @@ async def start_chat_server(scope: Scope, info: Info, request: Message) -> None:
 
 
 def start():
-    # host = 'ugsb-rbla01.bhdgsystematic.com'
-    domain = b'bhdgsystematic.com'
-    # host = 'localhost'
-    # domain = 'localhost'
+    domain = b'jetblack.net'
     port = 9007
 
     chat_server = ChatServer('chatter.db')
@@ -54,9 +51,5 @@ def start():
     app = Application(info={'chat_server': chat_server}, middlewares=[cors_middleware])
     add_graphql_next(app, schema, rest_middleware=jwt_authenticator, path_prefix='/chatter/api')
     auth_controller.add_routes(app, '/chatter/api')
-
-    # ssl_keyfile = os.path.expanduser('~/.keys/ugsb-rbla01.key')
-    # ssl_certfile = os.path.expanduser('~/.keys/ugsb-rbla01.crt')
-    # uvicorn.run(app, host='0.0.0.0', port=port, ssl_keyfile=ssl_keyfile, ssl_certfile=ssl_certfile)
 
     uvicorn.run(app, host='0.0.0.0', port=port)
