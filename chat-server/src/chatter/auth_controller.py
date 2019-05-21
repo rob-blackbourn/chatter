@@ -32,20 +32,17 @@ class AuthController:
         self.token_manager = token_manager
         self.login_expiry = login_expiry
 
-
     def add_routes(self, app: Application, path_prefix: str = ''):
         app.http_router.add({'POST', 'OPTIONS'}, f'{path_prefix}/register', self.register)
         app.http_router.add({'POST', 'OPTIONS'}, f'{path_prefix}/authenticate', self.authenticate)
         app.http_router.add({'GET'}, f'{path_prefix}/renew_token', self.renew_token)
         app.http_router.add({'GET'}, f'{path_prefix}/dummy', self.dummy)
 
-
     async def dummy(self, scope: Scope, info: Info, matches: RouteMatches, content: Content) -> HttpResponse:
         try:
             return self._authenticated_response(scope, "foo@bar.com")
         except Exception as error:
             return http_status_code.INTERNAL_SERVER_ERROR, [(b'content-type', b'text/plain')], text_writer(str(error))
-
 
     async def register(self, scope: Scope, info: Info, matches: RouteMatches, content: Content) -> HttpResponse:
         try:
@@ -56,15 +53,15 @@ class AuthController:
         except Exception as error:
             return http_status_code.INTERNAL_SERVER_ERROR, [(b'content-type', b'text/plain')], text_writer(str(error))
 
-
     async def authenticate(self, scope: Scope, info: Info, matches: RouteMatches, content: Content) -> HttpResponse:
         try:
             body = json.loads(await text_reader(content))
-            await self.auth_service.authenticate(body['email'], body['password'])
+            if not await self.auth_service.authenticate(body['email'], body['password']):
+                return http_status_code.UNAUTHORIZED, None, None
+            
             return self._authenticated_response(scope, body['email'])
         except Exception as error:
             return http_status_code.INTERNAL_SERVER_ERROR, [(b'content-type', b'text/plain')], text_writer(str(error))
-
 
     async def renew_token(self, scope: Scope, info: Info, matches: RouteMatches, content: Content) -> HttpResponse:
         try:
@@ -91,7 +88,6 @@ class AuthController:
             return self._authenticated_response(scope, email)
         except Exception as error:
             return http_status_code.INTERNAL_SERVER_ERROR, [(b'content-type', b'text/plain')], text_writer(str(error))
-
 
     def _authenticated_response(self, scope: Scope, email) -> HttpResponse:
         cookie = self.token_manager.generate_cookie(email)

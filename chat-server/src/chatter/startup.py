@@ -7,6 +7,7 @@ from bareasgi import (
 from bareasgi_cors import CORSMiddleware
 from bareasgi_graphql_next import add_graphql_next
 from datetime import timedelta
+import logging
 import uvicorn
 from .auth_service import AuthService
 from .auth_controller import AuthController
@@ -24,7 +25,7 @@ async def start_chat_server(scope: Scope, info: Info, request: Message) -> None:
 
 def start():
     domain = b'jetblack.net'
-    port = 9007
+    port = 10001
 
     chat_server = ChatServer('chatter.db')
     auth_service = AuthService('chatter.db')
@@ -52,4 +53,4 @@ def start():
     add_graphql_next(app, schema, rest_middleware=jwt_authenticator, path_prefix='/chatter/api')
     auth_controller.add_routes(app, '/chatter/api')
 
-    uvicorn.run(app, host='0.0.0.0', port=port)
+    uvicorn.run(app, host='0.0.0.0', port=port, log_level=logging.DEBUG)

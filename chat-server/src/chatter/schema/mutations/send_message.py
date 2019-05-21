@@ -4,10 +4,11 @@ from graphql import (
     GraphQLString
 )
 
+from ..types import ChatMessageType
 from ...resolvers.mutations import send_message
 
 SendMessageMutation = GraphQLField(
-    GraphQLString,
+    ChatMessageType,
     {
         'content': GraphQLArgument(GraphQLString)
     },

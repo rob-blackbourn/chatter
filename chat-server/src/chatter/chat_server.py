@@ -11,21 +11,19 @@ class ChatServer:
         self.listeners: List[asyncio.Queue] = []
         self.is_initialised = False
 
-
     def add_listener(self, listener: asyncio.Queue) -> None:
         self.listeners.append(listener)
-
 
     def remove_listener(self, listener: asyncio.Queue) -> None:
         self.listeners.remove(listener)
 
-
-    async def chat(self, email: str, content: str) -> None:
-        await self._save_message(email, content)
-        body = {'email': email, 'content': content}
+    async def chat(self, email: str, content: str) -> Mapping[str, Any]:
+        timestamp = datetime.utcnow()
+        await self._save_message(timestamp, email, content)
+        body = {'timestamp': timestamp, 'email': email, 'content': content}
         for listener in self.listeners:
             await listener.put(body)
-
+        return body
 
     async def fetch_messages(self, start_date: datetime, end_date: datetime) -> List[Mapping[str, Any]]:
         async with aiosqlite.connect(self.sqlite_url) as db:
@@ -48,17 +46,15 @@ class ChatServer:
                     )
                 return messages
 
-
-    async def _save_message(self, email, content: str) -> None:
+    async def _save_message(self, timestamp: datetime, email, content: str) -> None:
         async with aiosqlite.connect(self.sqlite_url) as db:
             if not self.is_initialised:
                 await self._initialise(db)
             await db.execute(
                 'INSERT INTO messages(timestamp, email, content) values (?, ?, ?)',
-                (self._to_timestamp(datetime.utcnow()), email, content)
+                (self._to_timestamp(timestamp), email, content)
             )
             await db.commit()
-
 
     async def _initialise(self, db: aiosqlite.Connection) -> None:
         await db.execute("""
@@ -73,11 +69,9 @@ class ChatServer:
         await db.commit()
         self.is_initialised = True
 
-
     @classmethod
     def _to_timestamp(cls, value: datetime) -> int:
         return int(value.timestamp() * 1000)
-
 
     @classmethod
     def _from_timestamp(cls, value: int) -> datetime:

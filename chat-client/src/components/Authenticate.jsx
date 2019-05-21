@@ -3,43 +3,50 @@ import PropTypes from 'prop-types'
 import { withStyles } from '@material-ui/core/styles'
 import FormGroup from '@material-ui/core/FormGroup'
 import FormControlLabel from '@material-ui/core/FormControlLabel'
-import Switch from '@material-ui/core/Switch'
+import Checkbox from '@material-ui/core/Checkbox'
+import Typography from '@material-ui/core/Typography'
 import Login from './Logon'
 import Register from './Register'
 
-const styles = theme => ({})
+const styles = theme => ({
+  container: {
+    margin: theme.spacing.unit
+  }
+})
 
 class Authenticate extends React.Component {
   constructor (props) {
     super(props)
     this.state = {
-      isRegistered: true
+      register: false
     }
   }
   render () {
-    const { onSuccess } = this.props
+    const { classes, onSuccess } = this.props
+    const { register } = this.state
 
     return (
-      <div>
+      <div className={classes.container}>
+        <Typography variant='h4'>{register ? 'Register' : 'Sign In'}</Typography>
+        {register ? (
+          <Register onSuccess={onSuccess} />
+        ) : (
+          <Login onSuccess={onSuccess} />
+        )}
         <FormGroup row>
           <FormControlLabel
             control={
-              <Switch
-                checked={this.state.isRegistered}
+              <Checkbox
+                checked={register}
                 onChange={event =>
-                  this.setState({ isRegistered: event.target.checked })
+                  this.setState({ register: event.target.checked })
                 }
-                value='isRegistered'
+                value='register'
               />
             }
-            label={this.state.isRegistered ? 'Register' : 'Logon'}
+            label='Register'
           />
         </FormGroup>
-        {this.state.isRegistered ? (
-          <Login onSuccess={onSuccess} />
-        ) : (
-          <Register onSuccess={onSuccess} />
-        )}
       </div>
     )
   }

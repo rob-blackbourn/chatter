@@ -2,20 +2,23 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { withStyles } from '@material-ui/core/styles'
 import Typography from '@material-ui/core/Typography'
-// import FormLabel from '@material-ui/core/FormLabel'
 import FormGroup from '@material-ui/core/FormGroup'
 import TextField from '@material-ui/core/TextField'
 import Card from '@material-ui/core/Card'
 import CardHeader from '@material-ui/core/CardHeader'
 import CardContent from '@material-ui/core/CardContent'
 import LinearProgress from '@material-ui/core/LinearProgress'
-import InfiniteScroll from 'react-infinite-scroller'
 import { DateTime } from 'luxon'
+// import {
+//   graphQLReconnectingSubscriber,
+//   graphQLRetryFetch,
+//   retryFetchOptions
+// } from '@jetblack/graphql-reconnect-client'
 import {
-  graphQLReconnectingSubscriber,
-  graphQLRetryFetch,
-  retryFetchOptions
-} from '@jetblack/graphql-reconnect-client'
+  graphQLSubscriber,
+  graphQLFetch,
+  fetchOptions
+} from '@jetblack/graphql-client/src'
 import CONFIG from '../config'
 
 const styles = theme => ({
@@ -43,20 +46,34 @@ const styles = theme => ({
   }
 })
 
+function toMessage (msg) {
+  return {
+    timestamp: new Date(msg.timestamp),
+    email: msg.email,
+    content: msg.content
+  }
+}
+
 class Chat extends React.Component {
   constructor (props) {
     super(props)
     this.state = {
       content: '',
-      hasMoreItems: true,
+      isLoading: false,
+      hasMore: true,
+      page: 0,
       messages: []
     }
+    this.bodyRef = React.createRef()
     this.messagesEnd = React.createRef()
     this.abortController = new AbortController()
   }
 
   processSubscription (response) {
     console.log(response)
+    this.setState((state, props) => ({
+      messages: [ ...state.messages, toMessage(response.listenToMessages) ]
+    }), this.scrollToLastMessage)
   }
 
   startSubscription () {
@@ -75,7 +92,7 @@ class Chat extends React.Component {
     const variables = {}
     const operationName = null
 
-    graphQLReconnectingSubscriber(url, options, (error, subscribe) => {
+    graphQLSubscriber(url, options, (error, subscribe) => {
       if (!(error || subscribe)) {
         // No more data
         return
@@ -101,10 +118,22 @@ class Chat extends React.Component {
 
   processQuery (response) {
     console.log(response)
-    this.setState((state, props) => ({ messages: [...state.messages, ...response.data.replayMessages] }), this.startSubscription)
+    this.setState(
+      (state, props) => ({
+        messages: [...state.messages, ...response.data.replayMessages.map(x => toMessage(x))],
+        hasMore: response.data.replayMessages.length > 0,
+        page: state.page + 1,
+        isLoading: false
+      }), () => {
+        const { page } = this.state
+
+        if (page === 1) {
+          this.scrollToLastMessage()
+        }
+      })
   }
 
-  loadMore = () => {
+  startQuery = () => {
     const url = CONFIG.graphqlQueryEndpoint
     const query = `
       query ReplayMessages($startDate: String!, $endDate: String!) {
@@ -117,16 +146,17 @@ class Chat extends React.Component {
       `
 
     const { messages } = this.state
-    const endDate = messages.length === 0 ? new Date() : new Date(Math.min(...messages.map(x => x.timestamp.valueOf())))
-    const startDate = DateTime.fromJSDate(endDate)
-      .plus({ days: -1 })
-      .toJSDate()
+    const endDate =
+      messages.length === 0
+        ? new Date()
+        : new Date(Math.min(...messages.map(x => x.timestamp.valueOf())))
+    const startDate = DateTime.fromJSDate(endDate).minus({ days: 1 }).toJSDate()
 
     const variables = { startDate, endDate }
     const operationName = null
 
-    graphQLRetryFetch(url, query, variables, operationName, {
-      ...retryFetchOptions,
+    graphQLFetch(url, query, variables, operationName, {
+      ...fetchOptions,
       signal: this.abortController.signal
     })
       .then(response => {
@@ -144,6 +174,19 @@ class Chat extends React.Component {
       })
   }
 
+  loadMore = () => {
+    this.setState((state, props) => {
+      if (state.isLoading) {
+        return {}
+      } else if (!state.hasMore) {
+        return { isLoading: false }
+      } else {
+        setTimeout(this.startQuery, 1)
+        return { isLoading: true }
+      }
+    })
+  }
+
   onSubmit = async event => {
     event.preventDefault()
 
@@ -151,8 +194,8 @@ class Chat extends React.Component {
 
     const url = CONFIG.graphqlQueryEndpoint
     const query = `
-      query SendMessage($content: String!) {
-        replayMessages(content: $content) {
+    mutation SendMessage($content: String!) {
+        sendMessage(content: $content) {
           timestamp
           email
           content
@@ -162,8 +205,8 @@ class Chat extends React.Component {
     const variables = { content }
     const operationName = null
 
-    graphQLRetryFetch(url, query, variables, operationName, {
-      ...retryFetchOptions,
+    graphQLFetch(url, query, variables, operationName, {
+      ...fetchOptions,
       signal: this.abortController.signal
     })
       .then(response => {
@@ -178,46 +221,52 @@ class Chat extends React.Component {
         }
         console.error(error)
       })
+
+    this.setState({ content: '' })
   }
 
   scrollToLastMessage = () => {
     this.messagesEnd.current.scrollIntoView({ behavior: 'smooth' })
   }
 
+  scrollListener = () => {
+    if (this.bodyRef.current.scrollTop === 0) {
+      if (this.state.hasMore) {
+        this.loadMore()
+      }
+    }
+  }
+
   componentDidMount () {
     this.scrollToLastMessage()
+    this.bodyRef.current.addEventListener('scroll', this.scrollListener)
+    this.startSubscription()
+    this.loadMore()
   }
 
   componentWillUnmount () {
     this.abortController.abort()
+    this.bodyRef.current.removeEventListener('scroll', this.scrollListener)
   }
 
   render () {
     const { classes } = this.props
-    const { content, messages, hasMoreItems } = this.state
+    const { content, messages, isLoading } = this.state
 
     return (
       <div className={classes.container}>
-
         <header className={classes.header}>
-          <Typography variant='h1'>Example</Typography>
+          <Typography variant='h2'>Example</Typography>
         </header>
 
-        <div className={classes.body} id='scrollId'>
-
-          <InfiniteScroll
-            loadMore={this.loadMore}
-            hasMore={hasMoreItems}
-            loader={<LinearProgress key={-1} />}
-            isReverse
-            initialLoad
-            useWindow={false}
-          >
-            {messages.map((message, index) => (
+        <div className={classes.body} ref={this.bodyRef}>
+          {isLoading
+            ? <LinearProgress />
+            : messages.map((message, index) => (
               <Card key={index}>
                 <CardHeader
                   title={message.email}
-                  titleTypographyProps={({ variant: 'h5' })}
+                  titleTypographyProps={{ variant: 'h5' }}
                   subheader={message.timestamp.toLocaleString()}
                 />
                 <CardContent>
@@ -225,8 +274,7 @@ class Chat extends React.Component {
                 </CardContent>
               </Card>
             ))}
-            <div key={messages.length} ref={this.messagesEnd} />
-          </InfiniteScroll>
+          <div key={messages.length} ref={this.messagesEnd} />
         </div>
 
         <footer className={classes.footer}>
@@ -239,13 +287,14 @@ class Chat extends React.Component {
                 label='Message'
                 className={classes.textField}
                 value={content}
-                onChange={event => this.setState({ content: event.target.value })}
+                onChange={event =>
+                  this.setState({ content: event.target.value })
+                }
                 margin='normal'
               />
             </FormGroup>
           </form>
         </footer>
-
       </div>
     )
   }
