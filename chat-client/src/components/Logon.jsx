@@ -59,6 +59,11 @@ class Logon extends React.Component {
     }
   }
 
+  onSubmit = () => {
+    event.preventDefault()
+    this.handleLogon()
+  }
+
   render () {
     const { classes } = this.props
     const { email, password } = this.state
@@ -66,7 +71,7 @@ class Logon extends React.Component {
     const isValid = email && password
 
     return (
-      <form className={classes.container} noValidate autoComplete='off'>
+      <form className={classes.container} noValidate autoComplete='off' onSubmit={this.onSubmit}>
         <Grid container>
           <Grid item xs={12}>
             <TextField

@@ -120,7 +120,10 @@ class Chat extends React.Component {
     console.log(response)
     this.setState(
       (state, props) => ({
-        messages: [...state.messages, ...response.data.replayMessages.map(x => toMessage(x))],
+        messages: [
+          ...response.data.replayMessages.map(x => toMessage(x)),
+          ...state.messages
+        ],
         hasMore: response.data.replayMessages.length > 0,
         page: state.page + 1,
         isLoading: false
