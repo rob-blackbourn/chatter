@@ -2,6 +2,7 @@ from graphql import (
     GraphQLField,
     GraphQLNonNull,
     GraphQLString,
+    GraphQLInt,
     GraphQLList,
     GraphQLArgument
 )
@@ -14,7 +15,8 @@ ReplayMessagesQuery = GraphQLField(
     GraphQLList(ChatMessageType),
     {
         'startDate': GraphQLArgument(GraphQLNonNull(GraphQLString)),
-        'endDate': GraphQLArgument(GraphQLNonNull(GraphQLString))
+        'endDate': GraphQLArgument(GraphQLNonNull(GraphQLString)),
+        'maxMessages': GraphQLArgument(GraphQLInt, default_value=5)
     },
     replay_messages
 )
