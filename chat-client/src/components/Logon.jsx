@@ -4,7 +4,7 @@ import { withStyles } from '@material-ui/core/styles'
 import TextField from '@material-ui/core/TextField'
 import Button from '@material-ui/core/Button'
 import Grid from '@material-ui/core/Grid'
-import CONFIG from '../config'
+import { authenticate } from '../api/authentication'
 
 const styles = theme => ({
   container: {
@@ -41,23 +41,9 @@ class Logon extends React.Component {
     event.preventDefault()
 
     const { email, password } = this.state
-    const url = CONFIG.authenticateEndpoint
 
-    console.log(url)
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-      if (!response.ok) {
-        throw new Error('failed to authenticate')
-      }
-
+    if (await authenticate(email, password)) {
       this.props.onSuccess()
-    } catch (error) {
-      console.log(error)
     }
   }
 

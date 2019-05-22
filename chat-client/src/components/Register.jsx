@@ -4,7 +4,7 @@ import { withStyles } from '@material-ui/core/styles'
 import TextField from '@material-ui/core/TextField'
 import Button from '@material-ui/core/Button'
 import Grid from '@material-ui/core/Grid'
-import CONFIG from '../config'
+import { register } from '../api/authentication'
 
 const styles = theme => ({
   container: {
@@ -43,19 +43,8 @@ class Register extends React.Component {
 
     const { email, password } = this.state
 
-    try {
-      const response = await fetch(CONFIG.registerEndpoint, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-      if (!response.ok) {
-        throw new Error('failed to authenticate')
-      }
-
+    if (await register(email, password)) {
       this.props.onSuccess()
-    } catch (error) {
-      console.log(error)
     }
   }
 
