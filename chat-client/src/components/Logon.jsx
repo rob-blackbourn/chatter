@@ -37,7 +37,9 @@ class Logon extends React.Component {
     })
   }
 
-  handleLogon = async () => {
+  onSubmit = async () => {
+    event.preventDefault()
+
     const { email, password } = this.state
     const url = CONFIG.authenticateEndpoint
 
@@ -57,11 +59,6 @@ class Logon extends React.Component {
     } catch (error) {
       console.log(error)
     }
-  }
-
-  onSubmit = () => {
-    event.preventDefault()
-    this.handleLogon()
   }
 
   render () {
@@ -102,11 +99,11 @@ class Logon extends React.Component {
           </Grid>
           <Grid item xs={12}>
             <Button
+              type='submit'
               variant='contained'
               color='primary'
               className={classes.button}
               disabled={!isValid}
-              onClick={this.handleLogon}
             >
               Logon
             </Button>

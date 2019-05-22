@@ -38,7 +38,9 @@ class Register extends React.Component {
     })
   }
 
-  handleRegister = async () => {
+  onSubmit = async () => {
+    event.preventDefault()
+
     const { email, password } = this.state
 
     try {
@@ -64,7 +66,7 @@ class Register extends React.Component {
     const isRegisterable = email && password && password === confirmPassword
 
     return (
-      <form className={classes.container} noValidate autoComplete='off'>
+      <form className={classes.container} noValidate autoComplete='off' onSubmit={this.onSubmit}>
         <Grid container>
           <Grid item xs={12}>
             <TextField
@@ -108,11 +110,11 @@ class Register extends React.Component {
           </Grid>
           <Grid item xs={12}>
             <Button
+              type='submit'
               variant='contained'
               color='primary'
               className={classes.button}
               disabled={!isRegisterable}
-              onClick={this.handleRegister}
             >
               Register
             </Button>
