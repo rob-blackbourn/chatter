@@ -55,19 +55,16 @@ function toMessage (msg) {
 }
 
 class Chat extends React.Component {
-  constructor (props) {
-    super(props)
-    this.state = {
-      content: '',
-      isLoading: false,
-      hasMore: true,
-      page: 0,
-      messages: []
-    }
-    this.bodyRef = React.createRef()
-    this.messagesEnd = React.createRef()
-    this.abortController = new AbortController()
+  state = {
+    content: '',
+    isLoading: false,
+    hasMore: true,
+    page: 0,
+    messages: []
   }
+  bodyRef = React.createRef()
+  lastMessageRef = React.createRef()
+  abortController = new AbortController()
 
   processSubscription (response) {
     console.log(response)
@@ -132,6 +129,8 @@ class Chat extends React.Component {
 
         if (page === 1) {
           this.scrollToLastMessage()
+        } else {
+          this.scrollToFirstMessage()
         }
       })
   }
@@ -228,8 +227,12 @@ class Chat extends React.Component {
     this.setState({ content: '' })
   }
 
+  scrollToFirstMessage = () => {
+    this.bodyRef.current.scrollTo({ top: 1, left: 0, behavior: 'smooth' })
+  }
+
   scrollToLastMessage = () => {
-    this.messagesEnd.current.scrollIntoView({ behavior: 'smooth' })
+    this.lastMessageRef.current.scrollIntoView({ behavior: 'smooth' })
   }
 
   scrollListener = () => {
@@ -277,7 +280,7 @@ class Chat extends React.Component {
                 </CardContent>
               </Card>
             ))}
-          <div key={messages.length} ref={this.messagesEnd} />
+          <div key={messages.length} ref={this.lastMessageRef} />
         </div>
 
         <footer className={classes.footer}>
