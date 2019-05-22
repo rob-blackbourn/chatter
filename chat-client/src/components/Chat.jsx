@@ -9,17 +9,7 @@ import CardHeader from '@material-ui/core/CardHeader'
 import CardContent from '@material-ui/core/CardContent'
 import LinearProgress from '@material-ui/core/LinearProgress'
 import { DateTime } from 'luxon'
-// import {
-//   graphQLReconnectingSubscriber,
-//   graphQLRetryFetch,
-//   retryFetchOptions
-// } from '@jetblack/graphql-reconnect-client'
-import {
-  graphQLSubscriber,
-  graphQLFetch,
-  fetchOptions
-} from '@jetblack/graphql-client/src'
-import CONFIG from '../config'
+import { sendMessage, fetchChats, subscribe } from '../api/chat'
 
 const styles = theme => ({
   container: {
@@ -66,59 +56,19 @@ class Chat extends React.Component {
   lastMessageRef = React.createRef()
   abortController = new AbortController()
 
-  processSubscription (response) {
+  processSubscription = (response) => {
     console.log(response)
     this.setState((state, props) => ({
       messages: [ ...state.messages, toMessage(response.listenToMessages) ]
     }), this.scrollToLastMessage)
   }
 
-  startSubscription () {
-    const url = CONFIG.graphqlSubscriptionEndpoint
-    const options = {}
-
-    const query = `
-    subscription {
-      listenToMessages {
-        timestamp,
-        email,
-        content
-      }
-    }
-    `
-    const variables = {}
-    const operationName = null
-
-    graphQLSubscriber(url, options, (error, subscribe) => {
-      if (!(error || subscribe)) {
-        // No more data
-        return
-      }
-      if (error) {
-        console.error(error)
-      } else {
-        subscribe(query, variables, operationName, (error, response) => {
-          if (!(error || response)) {
-            // No more data
-            return
-          }
-          if (error) {
-            console.error(error)
-            throw error
-          }
-          // this.setState({ isChanging: true }, this.processSubscription(response))
-          this.processSubscription(response)
-        })
-      }
-    })
-  }
-
-  processQuery (response) {
+  processQuery = (response) => {
     console.log(response)
     this.setState(
       (state, props) => ({
         messages: [
-          ...response.data.replayMessages.map(x => toMessage(x)),
+          ...response.data.replayMessages.map(x => toMessage(x)).sort((a, b) => a.timestamp.valueOf() - b.timestamp.valueOf()),
           ...state.messages
         ],
         hasMore: response.data.replayMessages.length > 0,
@@ -136,44 +86,15 @@ class Chat extends React.Component {
   }
 
   startQuery = () => {
-    const url = CONFIG.graphqlQueryEndpoint
-    const query = `
-      query ReplayMessages($startDate: String!, $endDate: String!) {
-        replayMessages(startDate: $startDate, endDate: $endDate) {
-          timestamp
-          email
-          content
-        }
-      }
-      `
-
     const { messages } = this.state
+
     const endDate =
       messages.length === 0
         ? new Date()
         : new Date(Math.min(...messages.map(x => x.timestamp.valueOf())))
     const startDate = DateTime.fromJSDate(endDate).minus({ days: 1 }).toJSDate()
 
-    const variables = { startDate, endDate }
-    const operationName = null
-
-    graphQLFetch(url, query, variables, operationName, {
-      ...fetchOptions,
-      signal: this.abortController.signal
-    })
-      .then(response => {
-        return response.json()
-      })
-      .then(response => {
-        console.log(response.data)
-        this.processQuery(response)
-      })
-      .catch(error => {
-        if (error instanceof DOMException) {
-          return
-        }
-        console.error(error)
-      })
+    fetchChats(startDate, endDate, this.abortController.signal, console.error, this.processQuery)
   }
 
   loadMore = () => {
@@ -194,35 +115,7 @@ class Chat extends React.Component {
 
     const { content } = this.state
 
-    const url = CONFIG.graphqlQueryEndpoint
-    const query = `
-    mutation SendMessage($content: String!) {
-        sendMessage(content: $content) {
-          timestamp
-          email
-          content
-        }
-      }
-      `
-    const variables = { content }
-    const operationName = null
-
-    graphQLFetch(url, query, variables, operationName, {
-      ...fetchOptions,
-      signal: this.abortController.signal
-    })
-      .then(response => {
-        return response.json()
-      })
-      .then(response => {
-        console.log(response.data)
-      })
-      .catch(error => {
-        if (error instanceof DOMException) {
-          return
-        }
-        console.error(error)
-      })
+    sendMessage(content, this.abortController.signal, console.log, console.log)
 
     this.setState({ content: '' })
   }
@@ -246,7 +139,7 @@ class Chat extends React.Component {
   componentDidMount () {
     this.scrollToLastMessage()
     this.bodyRef.current.addEventListener('scroll', this.scrollListener)
-    this.startSubscription()
+    subscribe(console.error, this.processSubscription)
     this.loadMore()
   }
 
@@ -262,7 +155,7 @@ class Chat extends React.Component {
     return (
       <div className={classes.container}>
         <header className={classes.header}>
-          <Typography variant='h2'>Example</Typography>
+          <Typography variant='h2'>Chat</Typography>
         </header>
 
         <div className={classes.body} ref={this.bodyRef}>
@@ -285,9 +178,6 @@ class Chat extends React.Component {
 
         <footer className={classes.footer}>
           <form component='fieldset' onSubmit={this.onSubmit}>
-            {/* <FormLabel component='legend'>
-              Some Legend
-            </FormLabel> */}
             <FormGroup>
               <TextField
                 label='Message'
