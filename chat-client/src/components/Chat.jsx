@@ -2,12 +2,11 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { withStyles } from '@material-ui/core/styles'
 import Typography from '@material-ui/core/Typography'
-import FormGroup from '@material-ui/core/FormGroup'
-import TextField from '@material-ui/core/TextField'
 import LinearProgress from '@material-ui/core/LinearProgress'
 import { DateTime } from 'luxon'
 import { sendMessage, fetchChats, subscribe } from '../api/chat'
 import ChatCard from './ChatCard'
+import ChatForm from './ChatForm'
 
 const styles = theme => ({
   container: {
@@ -44,7 +43,6 @@ function toMessage (msg) {
 
 class Chat extends React.Component {
   state = {
-    content: '',
     isLoading: false,
     hasMore: true,
     page: 0,
@@ -108,14 +106,8 @@ class Chat extends React.Component {
     })
   }
 
-  onSubmit = async event => {
-    event.preventDefault()
-
-    const { content } = this.state
-
+  onContent = async content => {
     sendMessage(content, this.abortController.signal, console.log, console.log)
-
-    this.setState({ content: '' })
   }
 
   scrollToFirstMessage = () => {
@@ -148,7 +140,7 @@ class Chat extends React.Component {
 
   render () {
     const { classes } = this.props
-    const { content, messages, isLoading } = this.state
+    const { messages, isLoading } = this.state
 
     return (
       <div className={classes.container}>
@@ -166,19 +158,7 @@ class Chat extends React.Component {
         </div>
 
         <footer className={classes.footer}>
-          <form component='fieldset' onSubmit={this.onSubmit}>
-            <FormGroup>
-              <TextField
-                label='Message'
-                className={classes.textField}
-                value={content}
-                onChange={event =>
-                  this.setState({ content: event.target.value })
-                }
-                margin='normal'
-              />
-            </FormGroup>
-          </form>
+          <ChatForm onContent={this.onContent} />
         </footer>
       </div>
     )
