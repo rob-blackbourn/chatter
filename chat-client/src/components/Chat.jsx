@@ -4,12 +4,10 @@ import { withStyles } from '@material-ui/core/styles'
 import Typography from '@material-ui/core/Typography'
 import FormGroup from '@material-ui/core/FormGroup'
 import TextField from '@material-ui/core/TextField'
-import Card from '@material-ui/core/Card'
-import CardHeader from '@material-ui/core/CardHeader'
-import CardContent from '@material-ui/core/CardContent'
 import LinearProgress from '@material-ui/core/LinearProgress'
 import { DateTime } from 'luxon'
 import { sendMessage, fetchChats, subscribe } from '../api/chat'
+import ChatCard from './ChatCard'
 
 const styles = theme => ({
   container: {
@@ -161,17 +159,8 @@ class Chat extends React.Component {
         <div className={classes.body} ref={this.bodyRef}>
           {isLoading
             ? <LinearProgress />
-            : messages.map((message, index) => (
-              <Card key={index}>
-                <CardHeader
-                  title={message.email}
-                  titleTypographyProps={{ variant: 'h5' }}
-                  subheader={message.timestamp.toLocaleString()}
-                />
-                <CardContent>
-                  <Typography component='p'>{message.content}</Typography>
-                </CardContent>
-              </Card>
+            : messages.map(({ email, timestamp, content }, index) => (
+              <ChatCard key={index} email={email} timestamp={timestamp} content={content} />
             ))}
           <div key={messages.length} ref={this.lastMessageRef} />
         </div>
