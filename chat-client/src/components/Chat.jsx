@@ -3,8 +3,7 @@ import PropTypes from 'prop-types'
 import { withStyles } from '@material-ui/core/styles'
 import Typography from '@material-ui/core/Typography'
 import LinearProgress from '@material-ui/core/LinearProgress'
-import { DateTime } from 'luxon'
-import { sendMessage, fetchChats, subscribe } from '../api/chat'
+import { sendMessage, fetchMessages, subscribe } from '../api/chat'
 import ChatCard from './ChatCard'
 import ChatForm from './ChatForm'
 
@@ -45,6 +44,7 @@ class Chat extends React.Component {
   state = {
     isLoading: false,
     hasMore: true,
+    lastMessage: null,
     page: 0,
     messages: []
   }
@@ -56,27 +56,31 @@ class Chat extends React.Component {
     console.log(response)
     this.setState((state, props) => ({
       messages: [ ...state.messages, toMessage(response.listenToMessages) ]
-    }), this.scrollToLastMessage)
+    }), () => this.scrollToLastMessage('smooth'))
   }
 
-  processQuery = (response) => {
-    console.log(response)
+  processQuery = (data) => {
+    console.log(data)
+    const messages = data.map(x => toMessage(x)).sort((a, b) => a.timestamp.valueOf() - b.timestamp.valueOf())
+    const hasMore = messages.length > 0
+    const lastMessage = hasMore ? messages[messages.length - 1] : null
     this.setState(
       (state, props) => ({
         messages: [
-          ...response.data.replayMessages.map(x => toMessage(x)).sort((a, b) => a.timestamp.valueOf() - b.timestamp.valueOf()),
+          ...messages,
           ...state.messages
         ],
-        hasMore: response.data.replayMessages.length > 0,
+        hasMore,
+        lastMessage,
         page: state.page + 1,
         isLoading: false
       }), () => {
         const { page } = this.state
 
         if (page === 1) {
-          this.scrollToLastMessage()
+          this.scrollToLastMessage({ behavior: 'smooth' })
         } else {
-          this.scrollToFirstMessage()
+          this.scrollToLastMessage({ behavior: 'auto', alignToTop: false })
         }
       })
   }
@@ -84,13 +88,12 @@ class Chat extends React.Component {
   startQuery = () => {
     const { messages } = this.state
 
-    const endDate =
+    const timestamp =
       messages.length === 0
-        ? new Date()
+        ? null
         : new Date(Math.min(...messages.map(x => x.timestamp.valueOf())))
-    const startDate = DateTime.fromJSDate(endDate).minus({ days: 1 }).toJSDate()
 
-    fetchChats(startDate, endDate, this.abortController.signal, console.error, this.processQuery)
+    fetchMessages(10, timestamp, this.abortController.signal, console.error, this.processQuery)
   }
 
   loadMore = () => {
@@ -110,12 +113,10 @@ class Chat extends React.Component {
     sendMessage(content, this.abortController.signal, console.log, console.log)
   }
 
-  scrollToFirstMessage = () => {
-    this.bodyRef.current.scrollTo({ top: 1, left: 0, behavior: 'smooth' })
-  }
-
-  scrollToLastMessage = () => {
-    this.lastMessageRef.current.scrollIntoView({ behavior: 'smooth' })
+  scrollToLastMessage = (options) => {
+    if (this.lastMessageRef.current) {
+      this.lastMessageRef.current.scrollIntoView(options)
+    }
   }
 
   scrollListener = () => {
@@ -127,7 +128,7 @@ class Chat extends React.Component {
   }
 
   componentDidMount () {
-    this.scrollToLastMessage()
+    this.scrollToLastMessage({ behavior: 'smooth' })
     this.bodyRef.current.addEventListener('scroll', this.scrollListener)
     subscribe(console.error, this.processSubscription)
     this.loadMore()
@@ -140,7 +141,7 @@ class Chat extends React.Component {
 
   render () {
     const { classes } = this.props
-    const { messages, isLoading } = this.state
+    const { messages, isLoading, lastMessage } = this.state
 
     return (
       <div className={classes.container}>
@@ -151,10 +152,17 @@ class Chat extends React.Component {
         <div className={classes.body} ref={this.bodyRef}>
           {isLoading
             ? <LinearProgress />
-            : messages.map(({ email, timestamp, content }, index) => (
-              <ChatCard key={index} email={email} timestamp={timestamp} content={content} />
+            : messages.map((message, index) => (
+              <div>
+                <ChatCard
+                  key={index}
+                  email={message.email}
+                  timestamp={message.timestamp}
+                  content={message.content}
+                />
+                {message === lastMessage ? <div key={messages.length} ref={this.lastMessageRef} /> : null}
+              </div>
             ))}
-          <div key={messages.length} ref={this.lastMessageRef} />
         </div>
 
         <footer className={classes.footer}>

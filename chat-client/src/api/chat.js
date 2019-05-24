@@ -39,18 +39,18 @@ export function sendMessage (content, signal, onError, onSuccess) {
     })
 }
 
-export function fetchChats (startDate, endDate, signal, onError, onSuccess) {
+export function fetchMessages (count, timestamp, signal, onError, onSuccess) {
   const url = CONFIG.graphqlQueryEndpoint
   const query = `
-    query ReplayMessages($startDate: String!, $endDate: String!) {
-      replayMessages(startDate: $startDate, endDate: $endDate) {
+    query FetchMessages($count: Int!, $timestamp: String) {
+      fetchMessages(count: $count, timestamp: $timestamp) {
         timestamp
         email
         content
       }
     }
     `
-  const variables = { startDate, endDate }
+  const variables = { count, timestamp }
   const operationName = null
 
   graphQLFetch(url, query, variables, operationName, {
@@ -61,8 +61,7 @@ export function fetchChats (startDate, endDate, signal, onError, onSuccess) {
       return response.json()
     })
     .then(response => {
-      console.log(response.data)
-      onSuccess(response)
+      onSuccess(response.data.fetchMessages)
     })
     .catch(error => {
       onError(error)
