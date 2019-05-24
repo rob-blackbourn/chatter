@@ -29,7 +29,7 @@ class ChatServer:
         return body
 
 
-    async def fetch_messages(
+    async def replay_messages(
             self,
             start_date: datetime,
             end_date: datetime,
@@ -49,6 +49,43 @@ class ChatServer:
                     """,
                     (self._to_timestamp(start_date), self._to_timestamp(end_date), max_messages or 5)
             ) as cursor:
+
+                messages = []
+                async for timestamp, email, content in cursor:
+                    messages.append(
+                        {
+                            'timestamp': self._from_timestamp(timestamp),
+                            'email': email,
+                            'content': content
+                        }
+                    )
+                return messages
+
+
+    async def fetch_messages(
+            self,
+            count: int,
+            timestamp: Optional[datetime]
+    ) -> List[Mapping[str, Any]]:
+        async with aiosqlite.connect(self.sqlite_url) as db:
+            if not self.is_initialised:
+                await self._initialise(db)
+
+            query = """
+                SELECT timestamp, email, content 
+                FROM messages 
+                WHERE timestamp < ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """ if timestamp else """
+                SELECT timestamp, email, content 
+                FROM messages 
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """
+            args = (self._to_timestamp(timestamp), count) if timestamp else (count,)
+
+            async with db.execute(query, args) as cursor:
 
                 messages = []
                 async for timestamp, email, content in cursor:
